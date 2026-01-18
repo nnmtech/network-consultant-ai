@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  network-consultant:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    image: network-consultant:2.1.0
+    container_name: network-consultant-prod
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=production
+      - LOG_LEVEL=INFO
+      - CACHE_DIR=/var/cache/network-ai
+      - CACHE_SHARDS=8
+      - CACHE_LOCK_TIMEOUT=30
+      - CACHE_LOCK_RETRY_INTERVAL=0.1
+      - CACHE_MAX_LOCK_ATTEMPTS=3
+      - WORKERS=4
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    volumes:
+      - cache-data:/var/cache/network-ai
+      - ./logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - network-ai
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    networks:
+      - network-ai
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    container_name: grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+    networks:
+      - network-ai
+
+volumes:
+  cache-data:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  network-ai:
+    driver: bridge
