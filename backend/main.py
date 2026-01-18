@@ -16,6 +16,7 @@ from backend.logging import configure_logging
 from backend.auth.jwt_handler import verify_token
 from backend.metrics.prometheus import metrics, CONTENT_TYPE_LATEST
 from backend.api.admin_routes import router as admin_router
+from backend.api.export_routes import router as export_router
 from backend.autonomous.health_monitor import health_monitor
 from backend.autonomous.self_healing import self_healing_actions
 from backend.autonomous.alert_manager import alert_manager
@@ -23,6 +24,7 @@ from backend.autonomous.rate_limiter import rate_limiter
 from backend.autonomous.circuit_breaker import circuit_breaker_manager
 from backend.autonomous.performance_optimizer import performance_optimizer
 from backend.autonomous.anomaly_detector import anomaly_detector
+from backend.autonomous.backup_manager import backup_manager
 from backend.database.audit_logger import audit_logger
 from backend.cache.redis_cache import redis_cache
 
@@ -72,12 +74,13 @@ async def setup_autonomous_monitoring():
     await health_monitor.start()
     await performance_optimizer.start()
     await anomaly_detector.start()
+    await backup_manager.start()
     
     logger.info("autonomous_systems_enabled")
 
 @asynccontextmanager
 async def robust_lifespan(app: FastAPI):
-    logger.info("startup", event="application_starting", version="2.1.0")
+    logger.info("startup", event="application_starting", version="2.2.0")
     await robust_cache.cleanup_stale_locks()
     await orchestrator.initialize()
     await setup_autonomous_monitoring()
@@ -86,12 +89,13 @@ async def robust_lifespan(app: FastAPI):
     await health_monitor.stop()
     await performance_optimizer.stop()
     await anomaly_detector.stop()
+    await backup_manager.stop()
     await orchestrator.shutdown()
 
 app = FastAPI(
     title="Network Consultant AI",
-    version="2.1.0",
-    description="Enterprise AI with autonomous monitoring, self-healing, and performance optimization",
+    version="2.2.0",
+    description="Enterprise AI with autonomous monitoring, multi-format export, and comprehensive reporting",
     lifespan=robust_lifespan,
     default_response_class=ORJSONResponse,
 )
@@ -105,6 +109,7 @@ app.add_middleware(
 )
 
 app.include_router(admin_router)
+app.include_router(export_router)
 
 class ClientContext(BaseModel):
     environment: str
@@ -242,7 +247,8 @@ async def health_check():
         "lock_system": "healthy",
         "autonomous_monitor": "healthy" if health_monitor.running else "stopped",
         "performance_optimizer": "healthy" if performance_optimizer.running else "stopped",
-        "anomaly_detector": "healthy" if anomaly_detector.running else "stopped"
+        "anomaly_detector": "healthy" if anomaly_detector.running else "stopped",
+        "backup_manager": "healthy" if backup_manager.running else "stopped"
     }
     
     return HealthResponse(
@@ -250,7 +256,7 @@ async def health_check():
         timestamp=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         components=components,
         uptime_seconds=int(time.time() - start_time),
-        version="2.1.0"
+        version="2.2.0"
     )
 
 @app.get("/health/live")
@@ -283,7 +289,7 @@ async def system_status(auth_payload: dict = Depends(verify_auth_token)):
     anomaly_detector.record_value("cache_hit_rate", cache_stats.get("hit_rate", 0))
     
     return {
-        "version": "2.1.0",
+        "version": "2.2.0",
         "environment": "production",
         "uptime_seconds": int(time.time() - start_time),
         "cache_stats": cache_stats,
