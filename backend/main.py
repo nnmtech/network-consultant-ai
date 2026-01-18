@@ -3,7 +3,7 @@ from typing import Optional
 import time
 
 from fastapi import FastAPI, HTTPException, Depends, status
-from fastapi.responses import ORJSONResponse
+from fastapi.responses import ORJSONResponse, Response
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,12 +13,26 @@ import structlog
 from backend.cache.robust_cache import robust_cache
 from backend.orchestration.enhanced_orchestrator import ProductionOrchestrator
 from backend.logging import configure_logging
+from backend.auth.jwt_handler import verify_token
+from backend.metrics.prometheus import metrics, CONTENT_TYPE_LATEST
 
 configure_logging()
 logger = structlog.get_logger()
 
 security = HTTPBearer()
 orchestrator = ProductionOrchestrator()
+
+async def verify_auth_token(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
+    token = credentials.credentials
+    payload = verify_token(token)
+    
+    if not payload:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token"
+        )
+    
+    return payload
 
 @asynccontextmanager
 async def robust_lifespan(app: FastAPI):
@@ -78,16 +92,19 @@ start_time = time.time()
 @app.post("/api/v1/orchestrate", response_model=OrchestrateResponse)
 async def orchestrate_issue(
     request: OrchestrateRequest,
-    credentials: HTTPAuthorizationCredentials = Depends(security)
+    auth_payload: dict = Depends(verify_auth_token)
 ):
     start = time.time()
     request_id = f"req_{int(start * 1000)}"
+    
+    user_id = auth_payload.get("sub")
     
     logger.info(
         "orchestration_request",
         request_id=request_id,
         issue=request.client_issue[:100],
-        priority=request.priority
+        priority=request.priority,
+        user_id=user_id
     )
     
     try:
@@ -95,7 +112,8 @@ async def orchestrate_issue(
             issue=request.client_issue,
             priority=request.priority,
             context=request.client_context.dict() if request.client_context else {},
-            tags=request.tags
+            tags=request.tags,
+            user_id=user_id
         )
         
         processing_time = int((time.time() - start) * 1000)
@@ -166,17 +184,14 @@ async def startup_probe():
     return {"status": "started"}
 
 @app.get("/metrics")
-async def metrics():
-    cache_stats = await robust_cache.get_stats()
-    return {
-        "cache_hits": cache_stats.get("hits", 0),
-        "cache_misses": cache_stats.get("misses", 0),
-        "cache_hit_rate": cache_stats.get("hit_rate", 0.0),
-        "uptime_seconds": int(time.time() - start_time),
-    }
+async def metrics_endpoint():
+    return Response(
+        content=metrics.generate_metrics(),
+        media_type=CONTENT_TYPE_LATEST
+    )
 
 @app.get("/system/status")
-async def system_status():
+async def system_status(auth_payload: dict = Depends(verify_auth_token)):
     return {
         "version": "2.1.0",
         "environment": "production",
