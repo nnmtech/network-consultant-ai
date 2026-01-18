@@ -56,7 +56,7 @@ spec:
         version: "2.1.0"
       annotations:
         prometheus.io/scrape: "true"
-        prometheus.io/port: "8000"
+        prometheus.io/port: "3000"
         prometheus.io/path: "/metrics"
     spec:
       serviceAccountName: network-consultant-sa
@@ -70,7 +70,7 @@ spec:
         image: network-consultant:2.1.0
         imagePullPolicy: IfNotPresent
         ports:
-        - containerPort: 8000
+        - containerPort: 3000
           name: http
           protocol: TCP
         envFrom:
@@ -95,7 +95,7 @@ spec:
         livenessProbe:
           httpGet:
             path: /health/live
-            port: 8000
+            port: 3000
           initialDelaySeconds: 30
           periodSeconds: 30
           timeoutSeconds: 5
@@ -103,7 +103,7 @@ spec:
         readinessProbe:
           httpGet:
             path: /health/ready
-            port: 8000
+            port: 3000
           initialDelaySeconds: 10
           periodSeconds: 10
           timeoutSeconds: 3
@@ -111,7 +111,7 @@ spec:
         startupProbe:
           httpGet:
             path: /health/startup
-            port: 8000
+            port: 3000
           initialDelaySeconds: 0
           periodSeconds: 5
           timeoutSeconds: 3
@@ -150,7 +150,7 @@ spec:
   ports:
   - name: http
     port: 80
-    targetPort: 8000
+    targetPort: 3000
     protocol: TCP
   sessionAffinity: ClientIP
 ---

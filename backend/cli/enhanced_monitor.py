@@ -15,7 +15,7 @@ console = Console()
 
 @app.command()
 def monitor(
-    url: str = typer.Option("http://localhost:8000", help="API base URL"),
+    url: str = typer.Option("http://localhost:3000", help="API base URL"),
     watch: bool = typer.Option(False, "--watch", "-w", help="Continuously monitor"),
     interval: int = typer.Option(5, help="Refresh interval in seconds")
 ):
@@ -92,7 +92,7 @@ def monitor(
 
 @app.command()
 def cache_stats(
-    url: str = typer.Option("http://localhost:8000", help="API base URL"),
+    url: str = typer.Option("http://localhost:3000", help="API base URL"),
     detail: bool = typer.Option(False, help="Show detailed statistics")
 ):
     """Display cache performance statistics"""
@@ -124,7 +124,7 @@ def cache_stats(
 
 @app.command()
 def diagnose(
-    url: str = typer.Option("http://localhost:8000", help="API base URL"),
+    url: str = typer.Option("http://localhost:3000", help="API base URL"),
     full: bool = typer.Option(False, help="Run full diagnostics")
 ):
     """Run system diagnostics"""

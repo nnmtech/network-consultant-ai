@@ -1,7 +1,7 @@
 import multiprocessing
 import os
 
-bind = "0.0.0.0:8000"
+bind = "0.0.0.0:3000"
 workers = int(os.getenv("WORKERS", multiprocessing.cpu_count()))
 worker_class = "uvicorn.workers.UvicornWorker"
 keepalive = 120
