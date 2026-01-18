@@ -16,6 +16,11 @@ from backend.logging import configure_logging
 from backend.auth.jwt_handler import verify_token
 from backend.metrics.prometheus import metrics, CONTENT_TYPE_LATEST
 from backend.api.admin_routes import router as admin_router
+from backend.autonomous.health_monitor import health_monitor
+from backend.autonomous.self_healing import self_healing_actions
+from backend.autonomous.alert_manager import alert_manager
+from backend.database.audit_logger import audit_logger
+from backend.cache.redis_cache import redis_cache
 
 configure_logging()
 logger = structlog.get_logger()
@@ -35,19 +40,50 @@ async def verify_auth_token(credentials: HTTPAuthorizationCredentials = Depends(
     
     return payload
 
+async def setup_autonomous_monitoring():
+    # Register health check functions
+    health_monitor.register_component(
+        "cache",
+        check_func=robust_cache.health_check,
+        heal_func=self_healing_actions.heal_cache_system
+    )
+    
+    health_monitor.register_component(
+        "database",
+        check_func=lambda: audit_logger.is_connected(),
+        heal_func=self_healing_actions.heal_database_connection
+    )
+    
+    health_monitor.register_component(
+        "redis",
+        check_func=lambda: redis_cache.is_connected(),
+        heal_func=self_healing_actions.heal_redis_connection
+    )
+    
+    health_monitor.register_component(
+        "orchestrator",
+        check_func=lambda: orchestrator.is_healthy(),
+        heal_func=None
+    )
+    
+    await health_monitor.start()
+    logger.info("autonomous_monitoring_enabled")
+
 @asynccontextmanager
 async def robust_lifespan(app: FastAPI):
     logger.info("startup", event="application_starting", version="2.1.0")
     await robust_cache.cleanup_stale_locks()
     await orchestrator.initialize()
+    await setup_autonomous_monitoring()
     yield
     logger.info("shutdown", event="application_stopping")
+    await health_monitor.stop()
     await orchestrator.shutdown()
 
 app = FastAPI(
     title="Network Consultant AI",
     version="2.1.0",
-    description="Enterprise-grade AI agent system for network consulting",
+    description="Enterprise-grade AI agent system with autonomous monitoring",
     lifespan=robust_lifespan,
     default_response_class=ORJSONResponse,
 )
@@ -160,6 +196,7 @@ async def health_check():
         "cache": "healthy" if await robust_cache.health_check() else "unhealthy",
         "orchestrator": "healthy" if orchestrator.is_healthy() else "unhealthy",
         "lock_system": "healthy",
+        "autonomous_monitor": "healthy" if health_monitor.running else "stopped"
     }
     
     return HealthResponse(
@@ -201,6 +238,18 @@ async def system_status(auth_payload: dict = Depends(verify_auth_token)):
         "uptime_seconds": int(time.time() - start_time),
         "cache_stats": await robust_cache.get_stats(),
         "orchestrator_status": orchestrator.get_status(),
+        "autonomous_health": health_monitor.get_health_summary(),
+        "alerts": alert_manager.get_alert_summary()
     }
+
+@app.get("/api/v1/autonomous/health-history")
+async def get_health_history(limit: int = 20):
+    return health_monitor.get_health_history(limit=limit)
+
+@app.get("/api/v1/autonomous/alerts")
+async def get_alerts(active_only: bool = True):
+    if active_only:
+        return alert_manager.get_active_alerts()
+    return alert_manager.get_all_alerts()
 
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
