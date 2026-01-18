@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  network-consultant-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: network-consultant:2.1.0
+    container_name: network-consultant-prod
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=production
+      - LOG_LEVEL=INFO
+      - CACHE_DIR=/var/cache/network-ai
+      - CACHE_SHARDS=8
+      - CACHE_LOCK_TIMEOUT=30
+      - CACHE_LOCK_RETRY_INTERVAL=0.1
+      - CACHE_MAX_LOCK_ATTEMPTS=3
+      - WORKERS=4
+    volumes:
+      - cache-data:/var/cache/network-ai
+      - ./logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp
+
+volumes:
+  cache-data:
+    driver: local
