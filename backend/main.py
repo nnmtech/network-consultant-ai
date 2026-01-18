@@ -17,6 +17,7 @@ from backend.auth.jwt_handler import verify_token
 from backend.metrics.prometheus import metrics, CONTENT_TYPE_LATEST
 from backend.api.admin_routes import router as admin_router
 from backend.api.export_routes import router as export_router
+from backend.api.versioning import router_v2
 from backend.autonomous.health_monitor import health_monitor
 from backend.autonomous.self_healing import self_healing_actions
 from backend.autonomous.alert_manager import alert_manager
@@ -25,6 +26,9 @@ from backend.autonomous.circuit_breaker import circuit_breaker_manager
 from backend.autonomous.performance_optimizer import performance_optimizer
 from backend.autonomous.anomaly_detector import anomaly_detector
 from backend.autonomous.backup_manager import backup_manager
+from backend.scheduler.task_scheduler import task_scheduler
+from backend.tenancy.multi_tenant import multi_tenant_manager
+from backend.audit.comprehensive_audit import comprehensive_audit
 from backend.database.audit_logger import audit_logger
 from backend.cache.redis_cache import redis_cache
 
@@ -75,12 +79,13 @@ async def setup_autonomous_monitoring():
     await performance_optimizer.start()
     await anomaly_detector.start()
     await backup_manager.start()
+    await task_scheduler.start()
     
     logger.info("autonomous_systems_enabled")
 
 @asynccontextmanager
 async def robust_lifespan(app: FastAPI):
-    logger.info("startup", event="application_starting", version="2.2.0")
+    logger.info("startup", event="application_starting", version="2.3.0")
     await robust_cache.cleanup_stale_locks()
     await orchestrator.initialize()
     await setup_autonomous_monitoring()
@@ -90,12 +95,13 @@ async def robust_lifespan(app: FastAPI):
     await performance_optimizer.stop()
     await anomaly_detector.stop()
     await backup_manager.stop()
+    await task_scheduler.stop()
     await orchestrator.shutdown()
 
 app = FastAPI(
     title="Network Consultant AI",
-    version="2.2.0",
-    description="Enterprise AI with autonomous monitoring, multi-format export, and comprehensive reporting",
+    version="2.3.0",
+    description="Enterprise AI with multi-tenancy, scheduled tasks, email notifications, and comprehensive audit",
     lifespan=robust_lifespan,
     default_response_class=ORJSONResponse,
 )
@@ -110,6 +116,7 @@ app.add_middleware(
 
 app.include_router(admin_router)
 app.include_router(export_router)
+app.include_router(router_v2)
 
 class ClientContext(BaseModel):
     environment: str
@@ -142,6 +149,30 @@ class HealthResponse(BaseModel):
 start_time = time.time()
 
 @app.middleware("http")
+async def comprehensive_audit_middleware(request: Request, call_next):
+    start = time.time()
+    
+    response = await call_next(request)
+    
+    duration_ms = int((time.time() - start) * 1000)
+    
+    # Log API call to audit trail
+    user_id = "anonymous"
+    tenant_id = "default"
+    
+    await comprehensive_audit.log_api_call(
+        user_id=user_id,
+        tenant_id=tenant_id,
+        endpoint=request.url.path,
+        method=request.method,
+        status_code=response.status_code,
+        duration_ms=duration_ms,
+        ip_address=request.client.host
+    )
+    
+    return response
+
+@app.middleware("http")
 async def rate_limit_middleware(request: Request, call_next):
     client_ip = request.client.host
     path = request.url.path
@@ -172,13 +203,20 @@ async def orchestrate_issue(
     request_id = f"req_{int(start * 1000)}"
     
     user_id = auth_payload.get("sub")
+    tenant_id = auth_payload.get("tenant_id", "default")
+    
+    # Check tenant quota
+    allowed, quota_message = multi_tenant_manager.check_quota(tenant_id)
+    if not allowed:
+        raise HTTPException(status_code=429, detail=quota_message)
     
     logger.info(
         "orchestration_request",
         request_id=request_id,
         issue=request.client_issue[:100],
         priority=request.priority,
-        user_id=user_id
+        user_id=user_id,
+        tenant_id=tenant_id
     )
     
     try:
@@ -202,6 +240,9 @@ async def orchestrate_issue(
             )
         
         processing_time = int((time.time() - start) * 1000)
+        
+        # Increment tenant usage
+        multi_tenant_manager.increment_usage(tenant_id)
         
         performance_optimizer.record_metric("orchestration_response_time", processing_time)
         anomaly_detector.record_value("orchestration_response_time", processing_time)
@@ -248,7 +289,8 @@ async def health_check():
         "autonomous_monitor": "healthy" if health_monitor.running else "stopped",
         "performance_optimizer": "healthy" if performance_optimizer.running else "stopped",
         "anomaly_detector": "healthy" if anomaly_detector.running else "stopped",
-        "backup_manager": "healthy" if backup_manager.running else "stopped"
+        "backup_manager": "healthy" if backup_manager.running else "stopped",
+        "task_scheduler": "healthy" if task_scheduler.running else "stopped"
     }
     
     return HealthResponse(
@@ -256,7 +298,7 @@ async def health_check():
         timestamp=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         components=components,
         uptime_seconds=int(time.time() - start_time),
-        version="2.2.0"
+        version="2.3.0"
     )
 
 @app.get("/health/live")
@@ -285,11 +327,12 @@ async def metrics_endpoint():
 @app.get("/system/status")
 async def system_status(auth_payload: dict = Depends(verify_auth_token)):
     cache_stats = await robust_cache.get_stats()
+    tenant_id = auth_payload.get("tenant_id", "default")
     
     anomaly_detector.record_value("cache_hit_rate", cache_stats.get("hit_rate", 0))
     
     return {
-        "version": "2.2.0",
+        "version": "2.3.0",
         "environment": "production",
         "uptime_seconds": int(time.time() - start_time),
         "cache_stats": cache_stats,
@@ -298,7 +341,9 @@ async def system_status(auth_payload: dict = Depends(verify_auth_token)):
         "alerts": alert_manager.get_alert_summary(),
         "circuit_breakers": circuit_breaker_manager.get_all_states(),
         "performance": performance_optimizer.get_metrics_summary(),
-        "anomalies": anomaly_detector.get_summary()
+        "anomalies": anomaly_detector.get_summary(),
+        "scheduled_tasks": task_scheduler.get_task_status(),
+        "tenant_stats": multi_tenant_manager.get_tenant_stats(tenant_id)
     }
 
 @app.get("/api/v1/autonomous/health-history")
