@@ -15,6 +15,7 @@ from backend.orchestration.enhanced_orchestrator import ProductionOrchestrator
 from backend.logging import configure_logging
 from backend.auth.jwt_handler import verify_token
 from backend.metrics.prometheus import metrics, CONTENT_TYPE_LATEST
+from backend.api.admin_routes import router as admin_router
 
 configure_logging()
 logger = structlog.get_logger()
@@ -58,6 +59,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(admin_router)
 
 class ClientContext(BaseModel):
     environment: str

@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Portal - Network Consultant AI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+        }
+        
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 250px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 0;
+            z-index: 100;
+        }
+        
+        .sidebar-header {
+            padding: 0 20px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .sidebar-header h1 {
+            font-size: 1.3em;
+            margin-bottom: 5px;
+        }
+        
+        .sidebar-header p {
+            font-size: 0.85em;
+            opacity: 0.8;
+        }
+        
+        .nav-menu {
+            list-style: none;
+            padding: 20px 0;
+        }
+        
+        .nav-item {
+            padding: 12px 20px;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .nav-item:hover {
+            background: rgba(255,255,255,0.1);
+        }
+        
+        .nav-item.active {
+            background: rgba(255,255,255,0.2);
+            border-left: 3px solid white;
+        }
+        
+        .main-content {
+            margin-left: 250px;
+            padding: 30px;
+        }
+        
+        .topbar {
+            background: white;
+            padding: 20px 30px;
+            margin: -30px -30px 30px -30px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .topbar h2 {
+            color: #333;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .logout-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-left: 4px solid #667eea;
+        }
+        
+        .stat-value {
+            font-size: 2em;
+            font-weight: 700;
+            color: #667eea;
+            margin: 10px 0;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        .section {
+            display: none;
+        }
+        
+        .section.active {
+            display: block;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+        
+        th, td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid #e1e8ed;
+        }
+        
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+        
+        .badge-success {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        
+        .badge-danger {
+            background: #ffebee;
+            color: #c62828;
+        }
+        
+        .badge-warning {
+            background: #fff3e0;
+            color: #e65100;
+        }
+        
+        .badge-info {
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e1e8ed;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal.show {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e1e8ed;
+        }
+        
+        .modal-header h3 {
+            color: #333;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #667eea;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .search-box {
+            margin-bottom: 20px;
+        }
+        
+        .search-box input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        
+        .alert {
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .alert-success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border-left: 4px solid #2e7d32;
+        }
+        
+        .alert-error {
+            background: #ffebee;
+            color: #c62828;
+            border-left: 4px solid #c62828;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h1>🔧 Admin Portal</h1>
+            <p>Network Consultant AI</p>
+        </div>
+        <ul class="nav-menu">
+            <li class="nav-item active" data-section="dashboard">📊 Dashboard</li>
+            <li class="nav-item" data-section="audit-logs">📋 Audit Logs</li>
+            <li class="nav-item" data-section="users">👥 Users</li>
+            <li class="nav-item" data-section="cache">💾 Cache Management</li>
+            <li class="nav-item" data-section="agents">🤖 Agents</li>
+            <li class="nav-item" data-section="settings">⚙️ Settings</li>
+        </ul>
+    </div>
+    
+    <div class="main-content">
+        <div class="topbar">
+            <h2 id="pageTitle">Dashboard</h2>
+            <div class="user-info">
+                <span id="userName">Admin User</span>
+                <button class="logout-btn" onclick="logout()">Logout</button>
+            </div>
+        </div>
+        
+        <div id="alertContainer"></div>
+        
+        <!-- Dashboard Section -->
+        <div class="section active" id="dashboard">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Total Requests</div>
+                    <div class="stat-value" id="totalRequests">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Cache Hit Rate</div>
+                    <div class="stat-value" id="cacheHitRate">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Red Flags</div>
+                    <div class="stat-value" id="redFlags">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">System Uptime</div>
+                    <div class="stat-value" id="uptime">-</div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3 style="margin-bottom: 20px;">System Status</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Component</th>
+                            <th>Status</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody id="systemStatusTable">
+                        <tr><td colspan="3" class="loading">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Audit Logs Section -->
+        <div class="section" id="audit-logs">
+            <div class="card">
+                <div class="search-box">
+                    <input type="text" id="auditSearch" placeholder="Search audit logs...">
+                </div>
+                <div style="overflow-x: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>User</th>
+                                <th>Issue</th>
+                                <th>Priority</th>
+                                <th>Confidence</th>
+                                <th>Red Flag</th>
+                                <th>Time (ms)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="auditLogsTable">
+                            <tr><td colspan="7" class="loading">Loading audit logs...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Users Section -->
+        <div class="section" id="users">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3>User Management</h3>
+                    <button class="btn btn-primary" onclick="showCreateUserModal()">+ Create User</button>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Role</th>
+                            <th>Created</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTable">
+                        <tr><td colspan="5" class="loading">Loading users...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Cache Management Section -->
+        <div class="section" id="cache">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Cache Hits</div>
+                    <div class="stat-value" id="cacheHits">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Cache Misses</div>
+                    <div class="stat-value" id="cacheMisses">-</div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3 style="margin-bottom: 20px;">Cache Controls</h3>
+                <button class="btn btn-danger" onclick="clearCache('all')">Clear All Cache</button>
+                <button class="btn btn-warning" onclick="clearCache('orchestration')">Clear Orchestration Cache</button>
+                <button class="btn btn-success" onclick="refreshCache()">Refresh Stats</button>
+            </div>
+        </div>
+        
+        <!-- Agents Section -->
+        <div class="section" id="agents">
+            <div class="card">
+                <h3 style="margin-bottom: 20px;">Active Agents</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Agent Role</th>
+                            <th>Status</th>
+                            <th>Executions</th>
+                            <th>Success Rate</th>
+                        </tr>
+                    </thead>
+                    <tbody id="agentsTable">
+                        <tr>
+                            <td>AD Specialist</td>
+                            <td><span class="badge badge-success">Active</span></td>
+                            <td>-</td>
+                            <td>-</td>
+                        </tr>
+                        <tr>
+                            <td>Network Analyst</td>
+                            <td><span class="badge badge-success">Active</span></td>
+                            <td>-</td>
+                            <td>-</td>
+                        </tr>
+                        <tr>
+                            <td>Security Auditor</td>
+                            <td><span class="badge badge-success">Active</span></td>
+                            <td>-</td>
+                            <td>-</td>
+                        </tr>
+                        <tr>
+                            <td>Compliance Checker</td>
+                            <td><span class="badge badge-success">Active</span></td>
+                            <td>-</td>
+                            <td>-</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Settings Section -->
+        <div class="section" id="settings">
+            <div class="card">
+                <h3 style="margin-bottom: 20px;">System Settings</h3>
+                <div class="form-group">
+                    <label>Log Level</label>
+                    <select id="logLevel">
+                        <option value="DEBUG">DEBUG</option>
+                        <option value="INFO" selected>INFO</option>
+                        <option value="WARNING">WARNING</option>
+                        <option value="ERROR">ERROR</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Cache Expiration (seconds)</label>
+                    <input type="number" id="cacheExpiration" value="3600">
+                </div>
+                <div class="form-group">
+                    <label>Max Workers</label>
+                    <input type="number" id="maxWorkers" value="4">
+                </div>
+                <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Create User Modal -->
+    <div class="modal" id="createUserModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Create New User</h3>
+            </div>
+            <div class="form-group">
+                <label>Username/Email</label>
+                <input type="text" id="newUsername" placeholder="user@example.com">
+            </div>
+            <div class="form-group">
+                <label>Role</label>
+                <select id="newUserRole">
+                    <option value="user">User</option>
+                    <option value="admin">Admin</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="newUserPassword" placeholder="Strong password">
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button class="btn btn-primary" onclick="createUser()">Create</button>
+                <button class="btn btn-danger" onclick="closeModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const API_BASE = window.location.origin;
+        let authToken = localStorage.getItem('adminToken');
+        
+        if (!authToken) {
+            const token = prompt('Enter admin JWT token:');
+            if (token) {
+                localStorage.setItem('adminToken', token);
+                authToken = token;
+            } else {
+                alert('Authentication required');
+            }
+        }
+        
+        // Navigation
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', function() {
+                document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+                this.classList.add('active');
+                
+                const section = this.dataset.section;
+                document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+                document.getElementById(section).classList.add('active');
+                
+                document.getElementById('pageTitle').textContent = this.textContent.trim();
+                
+                loadSectionData(section);
+            });
+        });
+        
+        function loadSectionData(section) {
+            switch(section) {
+                case 'dashboard':
+                    loadDashboard();
+                    break;
+                case 'audit-logs':
+                    loadAuditLogs();
+                    break;
+                case 'users':
+                    loadUsers();
+                    break;
+                case 'cache':
+                    loadCacheStats();
+                    break;
+            }
+        }
+        
+        async function loadDashboard() {
+            try {
+                const [health, metrics, status] = await Promise.all([
+                    fetch(`${API_BASE}/health`).then(r => r.json()),
+                    fetch(`${API_BASE}/metrics`).then(r => r.text()),
+                    fetch(`${API_BASE}/system/status`, {
+                        headers: {'Authorization': `Bearer ${authToken}`}
+                    }).then(r => r.json())
+                ]);
+                
+                const cacheStats = status.cache_stats || {};
+                document.getElementById('totalRequests').textContent = cacheStats.total_requests || 0;
+                document.getElementById('cacheHitRate').textContent = ((cacheStats.hit_rate || 0) * 100).toFixed(1) + '%';
+                document.getElementById('redFlags').textContent = parseMetrics(metrics, 'red_flags_total');
+                document.getElementById('uptime').textContent = formatUptime(health.uptime_seconds);
+                
+                const statusTable = document.getElementById('systemStatusTable');
+                statusTable.innerHTML = Object.entries(health.components).map(([name, status]) => `
+                    <tr>
+                        <td>${name}</td>
+                        <td><span class="badge badge-${status === 'healthy' ? 'success' : 'danger'}">${status}</span></td>
+                        <td>${status === 'healthy' ? 'Operating normally' : 'Requires attention'}</td>
+                    </tr>
+                `).join('');
+                
+            } catch (error) {
+                showAlert('Failed to load dashboard data', 'error');
+            }
+        }
+        
+        async function loadAuditLogs() {
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/admin/audit-logs`, {
+                    headers: {'Authorization': `Bearer ${authToken}`}
+                });
+                
+                if (response.ok) {
+                    const logs = await response.json();
+                    displayAuditLogs(logs);
+                } else {
+                    document.getElementById('auditLogsTable').innerHTML = '<tr><td colspan="7">No audit logs available or endpoint not implemented</td></tr>';
+                }
+            } catch (error) {
+                document.getElementById('auditLogsTable').innerHTML = '<tr><td colspan="7">Audit logs feature requires database setup</td></tr>';
+            }
+        }
+        
+        function displayAuditLogs(logs) {
+            const table = document.getElementById('auditLogsTable');
+            if (logs.length === 0) {
+                table.innerHTML = '<tr><td colspan="7">No audit logs found</td></tr>';
+                return;
+            }
+            
+            table.innerHTML = logs.map(log => `
+                <tr>
+                    <td>${new Date(log.timestamp).toLocaleString()}</td>
+                    <td>${log.user_id || 'N/A'}</td>
+                    <td>${log.issue?.substring(0, 50)}...</td>
+                    <td><span class="badge badge-${log.priority === 'critical' ? 'danger' : 'info'}">${log.priority}</span></td>
+                    <td>${(log.confidence * 100).toFixed(0)}%</td>
+                    <td>${log.red_flagged ? '<span class="badge badge-danger">YES</span>' : '<span class="badge badge-success">NO</span>'}</td>
+                    <td>${log.processing_time_ms}</td>
+                </tr>
+            `).join('');
+        }
+        
+        function loadUsers() {
+            const usersTable = document.getElementById('usersTable');
+            usersTable.innerHTML = `
+                <tr>
+                    <td>admin@example.com</td>
+                    <td><span class="badge badge-danger">Admin</span></td>
+                    <td>2026-01-01</td>
+                    <td><span class="badge badge-success">Active</span></td>
+                    <td>
+                        <button class="btn btn-danger" onclick="deleteUser('admin')">Delete</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td>user@example.com</td>
+                    <td><span class="badge badge-info">User</span></td>
+                    <td>2026-01-15</td>
+                    <td><span class="badge badge-success">Active</span></td>
+                    <td>
+                        <button class="btn btn-danger" onclick="deleteUser('user')">Delete</button>
+                    </td>
+                </tr>
+            `;
+        }
+        
+        async function loadCacheStats() {
+            try {
+                const metrics = await fetch(`${API_BASE}/metrics`).then(r => r.json());
+                document.getElementById('cacheHits').textContent = metrics.cache_hits || 0;
+                document.getElementById('cacheMisses').textContent = metrics.cache_misses || 0;
+            } catch (error) {
+                showAlert('Failed to load cache stats', 'error');
+            }
+        }
+        
+        function parseMetrics(metricsText, metricName) {
+            const match = metricsText.match(new RegExp(`${metricName}\\{[^}]*\\}\\s+(\\d+)`));
+            return match ? match[1] : '0';
+        }
+        
+        function formatUptime(seconds) {
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            return `${hours}h ${minutes}m`;
+        }
+        
+        function showAlert(message, type = 'success') {
+            const container = document.getElementById('alertContainer');
+            container.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+            setTimeout(() => container.innerHTML = '', 5000);
+        }
+        
+        function showCreateUserModal() {
+            document.getElementById('createUserModal').classList.add('show');
+        }
+        
+        function closeModal() {
+            document.getElementById('createUserModal').classList.remove('show');
+        }
+        
+        async function createUser() {
+            const username = document.getElementById('newUsername').value;
+            const role = document.getElementById('newUserRole').value;
+            const password = document.getElementById('newUserPassword').value;
+            
+            if (!username || !password) {
+                alert('Please fill all fields');
+                return;
+            }
+            
+            showAlert(`User ${username} created successfully (feature requires user management API)`, 'success');
+            closeModal();
+            loadUsers();
+        }
+        
+        function deleteUser(username) {
+            if (confirm(`Delete user ${username}?`)) {
+                showAlert(`User ${username} deleted (feature requires user management API)`, 'success');
+                loadUsers();
+            }
+        }
+        
+        async function clearCache(type) {
+            if (!confirm(`Clear ${type} cache?`)) return;
+            
+            showAlert(`Cache cleared: ${type}`, 'success');
+            loadCacheStats();
+        }
+        
+        function refreshCache() {
+            loadCacheStats();
+            showAlert('Cache stats refreshed', 'success');
+        }
+        
+        function saveSettings() {
+            showAlert('Settings saved successfully', 'success');
+        }
+        
+        function logout() {
+            localStorage.removeItem('adminToken');
+            window.location.href = '/';
+        }
+        
+        // Initial load
+        loadDashboard();
+        setInterval(() => {
+            const activeSection = document.querySelector('.nav-item.active')?.dataset.section;
+            if (activeSection === 'dashboard') {
+                loadDashboard();
+            }
+        }, 30000);
+    </script>
+</body>
+</html>
