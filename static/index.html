@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Consultant AI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+        
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+        }
+        
+        textarea, select, input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.3s;
+        }
+        
+        textarea:focus, select:focus, input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        textarea {
+            min-height: 150px;
+            resize: vertical;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 14px 32px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            width: 100%;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #667eea;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        #results {
+            display: none;
+        }
+        
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e1e8ed;
+        }
+        
+        .consensus {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .confidence {
+            font-size: 1.5em;
+            font-weight: 700;
+            color: #667eea;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        
+        .badge-success {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        
+        .badge-danger {
+            background: #ffebee;
+            color: #c62828;
+        }
+        
+        .agents-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .agent-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .agent-name {
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 8px;
+            text-transform: capitalize;
+        }
+        
+        .agent-verdict {
+            font-size: 0.9em;
+            color: #555;
+            margin-bottom: 5px;
+        }
+        
+        .agent-confidence {
+            font-weight: 600;
+            color: #2e7d32;
+        }
+        
+        .recommendations {
+            margin-top: 20px;
+        }
+        
+        .recommendations h3 {
+            font-size: 1.1em;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .recommendation-item {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            border-left: 3px solid #667eea;
+        }
+        
+        .meta-info {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #e1e8ed;
+            font-size: 0.9em;
+            color: #666;
+        }
+        
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #c62828;
+        }
+        
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            header h1 {
+                font-size: 1.8em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔧 Network Consultant AI</h1>
+            <p>Enterprise-grade AI agent system for network consulting</p>
+        </header>
+        
+        <div class="card">
+            <form id="issueForm">
+                <div class="form-group">
+                    <label for="client_issue">Describe the Network Issue *</label>
+                    <textarea 
+                        id="client_issue" 
+                        name="client_issue" 
+                        placeholder="Example: Users cannot authenticate to network shares at Atlanta HQ. Started this morning affecting 45 users."
+                        required
+                    ></textarea>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="priority">Priority Level</label>
+                        <select id="priority" name="priority">
+                            <option value="low">Low</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="high">High</option>
+                            <option value="critical">Critical</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="location">Location</label>
+                        <input type="text" id="location" name="location" placeholder="e.g., Atlanta HQ">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="environment">Environment</label>
+                        <input type="text" id="environment" name="environment" placeholder="e.g., Active Directory">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="users_affected">Users Affected</label>
+                        <input type="number" id="users_affected" name="users_affected" placeholder="e.g., 45">
+                    </div>
+                </div>
+                
+                <button type="submit" id="submitBtn">🚀 Analyze Issue</button>
+            </form>
+        </div>
+        
+        <div id="loading" class="card loading" style="display: none;">
+            <div class="spinner"></div>
+            <p>Analyzing issue with AI agents...</p>
+        </div>
+        
+        <div id="results" class="card"></div>
+    </div>
+    
+    <script>
+        const API_BASE = window.location.origin;
+        const form = document.getElementById('issueForm');
+        const loading = document.getElementById('loading');
+        const results = document.getElementById('results');
+        const submitBtn = document.getElementById('submitBtn');
+        
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const client_issue = formData.get('client_issue');
+            const priority = formData.get('priority');
+            const location = formData.get('location');
+            const environment = formData.get('environment');
+            const users_affected = formData.get('users_affected');
+            
+            const payload = {
+                client_issue,
+                priority,
+                client_context: {
+                    environment: environment || undefined,
+                    location: location || undefined,
+                    users_affected: users_affected ? parseInt(users_affected) : undefined
+                },
+                tags: []
+            };
+            
+            // Clean up undefined values
+            Object.keys(payload.client_context).forEach(key => {
+                if (payload.client_context[key] === undefined) {
+                    delete payload.client_context[key];
+                }
+            });
+            
+            if (Object.keys(payload.client_context).length === 0) {
+                delete payload.client_context;
+            }
+            
+            submitBtn.disabled = true;
+            loading.style.display = 'block';
+            results.style.display = 'none';
+            
+            try {
+                const res = await fetch(`${API_BASE}/api/v1/orchestrate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer demo-token'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (!res.ok) {
+                    throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+                }
+                
+                const data = await res.json();
+                displayResults(data);
+            } catch (error) {
+                displayError(error.message);
+            } finally {
+                submitBtn.disabled = false;
+                loading.style.display = 'none';
+            }
+        };
+        
+        function displayResults(data) {
+            const redFlagBadge = data.red_flagged 
+                ? '<span class="badge badge-danger">🚨 RED FLAG</span>' 
+                : '<span class="badge badge-success">✓ Normal</span>';
+            
+            let agentsHTML = '';
+            for (const [agentName, agentData] of Object.entries(data.agents)) {
+                agentsHTML += `
+                    <div class="agent-card">
+                        <div class="agent-name">${agentName.replace(/_/g, ' ')}</div>
+                        <div class="agent-verdict">${agentData.verdict}</div>
+                        <div class="agent-confidence">Confidence: ${(agentData.confidence * 100).toFixed(0)}%</div>
+                    </div>
+                `;
+            }
+            
+            let recommendationsHTML = '';
+            if (data.recommendations && data.recommendations.length > 0) {
+                recommendationsHTML = `
+                    <div class="recommendations">
+                        <h3>💡 Recommendations</h3>
+                        ${data.recommendations.map(rec => `<div class="recommendation-item">${rec}</div>`).join('')}
+                    </div>
+                `;
+            }
+            
+            results.innerHTML = `
+                <div class="result-header">
+                    <div>
+                        <div class="consensus">${data.consensus}</div>
+                    </div>
+                    <div>
+                        <div class="confidence">${(data.confidence * 100).toFixed(0)}%</div>
+                        ${redFlagBadge}
+                    </div>
+                </div>
+                
+                <h3 style="margin-bottom: 15px; color: #333;">🤖 Agent Analysis</h3>
+                <div class="agents-grid">
+                    ${agentsHTML}
+                </div>
+                
+                ${recommendationsHTML}
+                
+                <div class="meta-info">
+                    <div><strong>Request ID:</strong> ${data.request_id}</div>
+                    <div><strong>Processing Time:</strong> ${data.processing_time_ms}ms</div>
+                    <div><strong>Status:</strong> ${data.status}</div>
+                </div>
+            `;
+            
+            results.style.display = 'block';
+            results.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+        
+        function displayError(message) {
+            results.innerHTML = `
+                <div class="error">
+                    <h3 style="margin-bottom: 10px;">❌ Error</h3>
+                    <p>${message}</p>
+                    <p style="margin-top: 10px; font-size: 0.9em;">Please check the console for more details or contact support.</p>
+                </div>
+            `;
+            results.style.display = 'block';
+        }
+    </script>
+</body>
+</html>

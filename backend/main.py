@@ -5,6 +5,8 @@ import time
 from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.responses import ORJSONResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 import structlog
 
@@ -33,6 +35,14 @@ app = FastAPI(
     description="Enterprise-grade AI agent system for network consulting",
     lifespan=robust_lifespan,
     default_response_class=ORJSONResponse,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 class ClientContext(BaseModel):
@@ -174,3 +184,5 @@ async def system_status():
         "cache_stats": await robust_cache.get_stats(),
         "orchestrator_status": orchestrator.get_status(),
     }
+
+app.mount("/", StaticFiles(directory="static", html=True), name="static")
